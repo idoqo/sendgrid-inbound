@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Post;
+use App\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use SendGrid\Mail\From;
@@ -29,33 +30,36 @@ class PostsController extends Controller
     public function receiveEmailResponse(Request $request) {
         $from = $request->input("from");
         $to = $request->input("to");
-        $body = $request->input("body");
-        $spamScore = $request->input("spam_score");
+        $body = $request->input("text");
 
-        preg_match("#<(.*?)>#", $from, $fromArray);
-        preg_match("#<(.*?)>#", $to, $toArray);
-        $fromEmail = $fromArray[1];
-        $toEmail = $toArray[1];
-        $postId = explode($toEmail, "+")[1];
-        $data = [
-            'from' => $fromEmail,
-            'to' => $toEmail,
-            'post_id' => $postId,
-            'body' => $body,
-            'spam_score' => $spamScore
-        ];
-        Log::info("Received webhook: " + json_encode($data, JSON_PRETTY_PRINT));
+        preg_match("#<(.*?)>#", $from, $sender);
+        preg_match("#<(.*?)>#", $to, $recipient);
+        $senderAddr = $sender[1];
+        $recipientAddr = $recipient[1];
+
+        // extract the number between "+" and "@" in the email address, this would be the post ID
+        preg_match("#\+(.*?)@#", $recipientAddr, $postId);
+        if ($post = Post::find((int)$postId[1])) {
+            $comment = Response::create([
+                'email' => $senderAddr,
+                'post_id' => $post->id,
+                'body' => $body
+            ]);
+            Log::info("Create response: " . $comment->toJson(JSON_PRETTY_PRINT));
+        }
+
+        // in any case, return a 200 OK response so SendGrid knows we are done.
+        return response()->json(["success" => true]);
     }
 
     public function sendMails() {
         $post = Post::find(1);
 
         $mails = [
-            "Oulle1944@rhyta.com",
-            "Quar1980@jourrapide.com"
+            "cavaro5427@lexu4g.com",
         ];
         $subject = "SG Inbound Tutorial: ".$post->title;
-        $from = "post-replies+".$post->id."@michaelokoko.com";
+        $from = "replies+".$post->id."@inbound.michaelokoko.com";
         $text = "Reply to this email to leave a comment on " . $post->title;
 
         $mail = new Mail();

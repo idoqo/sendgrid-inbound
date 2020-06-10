@@ -14,7 +14,7 @@ class PostsController extends Controller
     public function index() {
         $posts = Post::paginate(15);
         $data = [
-            'posts' => $posts
+            "posts" => $posts
         ];
         return view("posts", $data);
     }
@@ -52,8 +52,8 @@ class PostsController extends Controller
         return response()->json(["success" => true]);
     }
 
-    public function sendMails() {
-        $post = Post::find(1);
+    public function sendMails($id) {
+        $post = Post::findOrFail($id);
 
         $mails = [
             "cavaro5427@lexu4g.com",
@@ -77,9 +77,10 @@ class PostsController extends Controller
             $response = $sg->send($mail);
             $context = json_decode($response->body());
             if ($response->statusCode() == 202) {
-                Log::info("Mail has been sent", ["context" => $context]);
+                echo "Emails have been sent out successfully!";
             }else {
-                Log::error("Failed to send mail", ["context" => $context]);
+                echo "Failed to send email";
+                Log::error("Failed to send email", ["context" => $context]);
             }
         } catch (\Exception $e) {
             Log::error($e);
